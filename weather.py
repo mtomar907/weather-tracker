@@ -1,6 +1,10 @@
+import os
+os.environ['MPLBACKEND'] = 'Agg'
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import requests
 import pandas as pd
-import os
 from datetime import date
 
 # My camping location
@@ -12,6 +16,36 @@ LOCATION_NAME = "Yosemite, CA"
 CAMP_MONTH = 8
 CAMP_START_DAY = 1
 CAMP_END_DAY = 14
+
+def generate_dashboard():
+    df = pd.read_csv("daily_log.csv", skipinitialspace=True)
+    df["datetime"] = pd.to_datetime(df["time"])
+    df = df.sort_values("datetime")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(df["datetime"], df["temp_f"], color="steelblue", linewidth=2, marker='o', markersize=5, label="Temp (°F)")
+    max_idx = df["temp_f"].idxmax()
+    min_idx = df["temp_f"].idxmin()
+    ax.scatter(df.loc[max_idx, "datetime"], df.loc[max_idx, "temp_f"],
+        color="red", zorder=5, label=f"Max: {df.loc[max_idx, 'temp_f']}°F")
+    ax.scatter(df.loc[min_idx, "datetime"], df.loc[min_idx, "temp_f"],
+        color="blue", zorder=5, label=f"Min: {df.loc[min_idx, 'temp_f']}°F")
+    ax.annotate(f"Max: {df.loc[max_idx, 'temp_f']}°F",
+        xy=(df.loc[max_idx, "datetime"], df.loc[max_idx, "temp_f"]),
+        xytext=(10, 10), textcoords="offset points",
+        color="red", fontsize=9)
+    ax.annotate(f"Min: {df.loc[min_idx, 'temp_f']}°F",
+        xy=(df.loc[min_idx, "datetime"], df.loc[min_idx, "temp_f"]),
+        xytext=(10, -15), textcoords="offset points",
+        color="blue", fontsize=9)
+    ax.set_ylim(df["temp_f"].min() - 5, df["temp_f"].max() + 8)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
+    plt.xticks(rotation=45)
+    ax.set_title("My City Temperature Dashboard")
+    ax.set_ylabel("Temperature (°F)")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig("dashboard.png", dpi=150)
+    plt.close()
 
 def get_historical_weather(lat, lon, start_date, end_date):
     url = "https://archive-api.open-meteo.com/v1/archive"
@@ -115,3 +149,5 @@ print(forecast_df)
 historical_df.to_csv("historical_weather.csv", index=False)
 forecast_df.to_csv("forecast_weather.csv", index=False)
 print("\nData saved to CSV files.")
+
+generate_dashboard()
